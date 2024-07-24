@@ -1,0 +1,58 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0.1",
+	"FriendlyName": "EOSGo",
+	"Description": "A plugin for handling epic online services.",
+	"Category": "Fedahumada",
+	"CreatedBy": "fedahumada",
+	"CreatedByURL": "https://fedahumada.github.io/",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"CanContainContent": true,
+	"IsBetaVersion": true,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "EOSGo",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "SocketSubsystemEOS",
+			"Enabled": true
+		},
+		{
+			"Name": "OnlineSubsystemEOS",
+			"Enabled": true
+		},
+		{
+			"Name": "OnlineServicesEOSGS",
+			"Enabled": true
+		},
+		{
+			"Name": "OnlineServicesEOS",
+			"Enabled": true
+		},
+		{
+			"Name": "EOSShared",
+			"Enabled": true
+		},
+		{
+			"Name": "EOSVoiceChat",
+			"Enabled": true
+		},
+		{
+			"Name": "OnlineSubsystem",
+			"Enabled": true
+		},
+		{
+			"Name": "OnlineSubsystemUtils",
+			"Enabled": true
+		}
+	]
+}
