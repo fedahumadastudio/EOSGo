@@ -3,6 +3,7 @@
 
 #include "Subsystem/GoSubsystem.h"
 #include "OnlineSubsystem.h"
+#include "OnlineSubsystemUtils.h"
 #include "OnlineSessionSettings.h"
 
 UGoSubsystem::UGoSubsystem() :
@@ -15,8 +16,44 @@ StartSessionCompleteDelegate(FOnStartSessionCompleteDelegate::CreateUObject(this
 {
 	if (IOnlineSubsystem* Subsystem = IOnlineSubsystem::Get())
 	{
+		Identity = Subsystem->GetIdentityInterface();
 		SessionInterface = Subsystem->GetSessionInterface();
 	}
+	
+}
+
+void UGoSubsystem::LoginWithEOS(FString Id, FString Token, FString LoginType)
+{
+	if(!Identity.IsValid()) return;
+
+	FOnlineAccountCredentials AccountDetails;
+	AccountDetails.Id = Id;
+	AccountDetails.Token = Token;
+	AccountDetails.Type = LoginType;
+
+	//~ Bind login callback.
+	Identity->OnLoginCompleteDelegates->AddUObject(this, &UGoSubsystem::LoginWithEOS_Response);
+
+	//~ LOGIN
+	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
+	Identity->Login(LocalPlayer->GetControllerId(), AccountDetails);
+	
+}
+void UGoSubsystem::LoginWithEOS_Response(int32 LocalUserNum, bool bWasSuccess, const FUniqueNetId& UserId, const FString& Error) const
+{
+	bWasSuccess ? ScreenMessage(FColor::Green,FString(TEXT("Login Successful"))) : ScreenMessage(FColor::Red,FString(TEXT("Login Failed")));
+}
+
+bool UGoSubsystem::IsPlayerLoggedIn()
+{
+	//TODO: 
+	return true;
+}
+
+FString UGoSubsystem::GetPlayerUsername()
+{
+	//TODO: 
+	return FString();
 }
 
 

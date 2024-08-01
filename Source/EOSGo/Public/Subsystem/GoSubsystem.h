@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Interfaces/OnlineIdentityInterface.h"
 #include "Interfaces/OnlineSessionInterface.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "GoSubsystem.generated.h"
@@ -25,7 +26,17 @@ class EOSGO_API UGoSubsystem : public UGameInstanceSubsystem
 public:
 	UGoSubsystem();
 
-	//~ To handle session functionality. GoMenu class will call these.
+	//~ To handle EOS login functionality.
+	void LoginWithEOS(FString Id, FString Token, FString LoginType);
+	void LoginWithEOS_Response(int32 LocalUserNum, bool bWasSuccess, const FUniqueNetId& UserId, const FString& Error) const;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="EOS-Go|Account")
+	bool IsPlayerLoggedIn();
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="EOS-Go|Account")
+	FString GetPlayerUsername();
+	
+
+	//~ To handle session functionality. GoMenu clicked buttons will call these.
 	void GoCreateSession(int32 NumberOfPublicConnections, FString MatchType);
 	FGoOnCreateSessionComplete GoOnCreateSessionComplete;
 	void GoFindSessions(int32 MaxSearchResults);
@@ -45,6 +56,7 @@ protected:
 	void OnStartSessionComplete(FName SessionName,bool bWasSuccess);
 	
 private:
+	IOnlineIdentityPtr Identity;
 	IOnlineSessionPtr SessionInterface;
 	TSharedPtr<FOnlineSessionSettings> LastSessionSettings;
 	TSharedPtr<FOnlineSessionSearch> LastSessionSearch;
@@ -64,5 +76,5 @@ private:
 
 static void ScreenMessage(FColor Color, FString Message)
 {
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1,10.f,Color, *Message);
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1,5.f,Color, *Message);
 }

@@ -52,9 +52,5 @@ private:
 	void HostButtonClicked();
 	UFUNCTION()
 	void JoinButtonClicked();
-
-	
-
-	
 	
 };
