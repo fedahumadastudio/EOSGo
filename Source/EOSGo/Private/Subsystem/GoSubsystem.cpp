@@ -19,10 +19,9 @@ StartSessionCompleteDelegate(FOnStartSessionCompleteDelegate::CreateUObject(this
 		Identity = Subsystem->GetIdentityInterface();
 		SessionInterface = Subsystem->GetSessionInterface();
 	}
-	
 }
 
-void UGoSubsystem::LoginWithEOS(FString Id, FString Token, FString LoginType)
+void UGoSubsystem::GoEOSLogin(FString Id, FString Token, FString LoginType)
 {
 	if(!Identity.IsValid()) return;
 
@@ -32,27 +31,35 @@ void UGoSubsystem::LoginWithEOS(FString Id, FString Token, FString LoginType)
 	AccountDetails.Type = LoginType;
 
 	//~ Bind login callback.
-	Identity->OnLoginCompleteDelegates->AddUObject(this, &UGoSubsystem::LoginWithEOS_Response);
+	Identity->OnLoginCompleteDelegates->AddUObject(this, &UGoSubsystem::GoEOSLogin_Response);
 
 	//~ LOGIN
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
 	Identity->Login(LocalPlayer->GetControllerId(), AccountDetails);
 	
 }
-void UGoSubsystem::LoginWithEOS_Response(int32 LocalUserNum, bool bWasSuccess, const FUniqueNetId& UserId, const FString& Error) const
+void UGoSubsystem::GoEOSLogin_Response(int32 LocalUserNum, bool bWasSuccess, const FUniqueNetId& UserId, const FString& Error) const
 {
-	bWasSuccess ? ScreenMessage(FColor::Green,FString(TEXT("Login Successful"))) : ScreenMessage(FColor::Red,FString(TEXT("Login Failed")));
+	bWasSuccess ? LogMessage(FColor::Green,FString(TEXT("Login Successful"))) : LogMessage(FColor::Red,FString(TEXT("Login Failed")));
 }
+
 
 bool UGoSubsystem::IsPlayerLoggedIn()
 {
-	//TODO: 
-	return true;
-}
+	if(!Identity.IsValid()) return false;
 
+	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
+	return Identity->GetLoginStatus(LocalPlayer->GetControllerId()) == ELoginStatus::LoggedIn;
+}
 FString UGoSubsystem::GetPlayerUsername()
 {
-	//TODO: 
+	if(!Identity.IsValid()) FString();
+
+	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
+	if (Identity->GetLoginStatus(LocalPlayer->GetControllerId()) == ELoginStatus::LoggedIn)
+	{
+		return Identity->GetPlayerNickname(LocalPlayer->GetControllerId());
+	}
 	return FString();
 }
 

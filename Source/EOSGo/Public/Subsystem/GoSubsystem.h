@@ -27,9 +27,10 @@ public:
 	UGoSubsystem();
 
 	//~ To handle EOS login functionality.
-	void LoginWithEOS(FString Id, FString Token, FString LoginType);
-	void LoginWithEOS_Response(int32 LocalUserNum, bool bWasSuccess, const FUniqueNetId& UserId, const FString& Error) const;
+	void GoEOSLogin(FString Id, FString Token, FString LoginType);
+	void GoEOSLogin_Response(int32 LocalUserNum, bool bWasSuccess, const FUniqueNetId& UserId, const FString& Error) const;
 
+	
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="EOS-Go|Account")
 	bool IsPlayerLoggedIn();
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="EOS-Go|Account")
@@ -74,7 +75,8 @@ private:
 	FDelegateHandle StartSessionCompleteDelegateHandle;
 };
 
-static void ScreenMessage(FColor Color, FString Message)
+static void LogMessage(FColor Color, FString Message)
 {
+	UE_LOG(LogTemp, Warning, TEXT("%s"), *Message);
 	if (GEngine) GEngine->AddOnScreenDebugMessage(-1,5.f,Color, *Message);
 }

@@ -54,14 +54,18 @@ void UGoMenu::MenuSetup(int32 NumberOfPublicConnections, FString TypeOfMatch, FS
 		GoSubsystem = GameInstance->GetSubsystem<UGoSubsystem>();
 	}
 
-	//~ Bind session callbacks.
+	
 	if (IsValid(GoSubsystem))
 	{
+		//~ Bind session callbacks.
 		GoSubsystem->GoOnCreateSessionComplete.AddDynamic(this, &UGoMenu::OnCreateSession);
 		GoSubsystem->GoOnFindSessionsComplete.AddUObject(this, &UGoMenu::OnFindSessions);
 		GoSubsystem->GoOnJoinSessionComplete.AddUObject(this, &UGoMenu::OnJoinSession);
 		GoSubsystem->GoOnDestroySessionComplete.AddDynamic(this, &UGoMenu::OnDestroySession);
 		GoSubsystem->GoOnStartSessionComplete.AddDynamic(this, &UGoMenu::OnStartSession);
+
+		//~ Login
+		GoSubsystem->GoEOSLogin("","","accountportal");
 	}
 }
 
@@ -69,12 +73,12 @@ void UGoMenu::OnCreateSession(bool bWasSuccessful)
 {
 	if (bWasSuccessful)
 	{
-		ScreenMessage(FColor::Green,FString(TEXT("Session created successfully")));
+		LogMessage(FColor::Green,FString(TEXT("Session created successfully")));
 		if (UWorld* World = GetWorld()) World->ServerTravel(MapToTravel);
 	}
 	else
 	{
-		ScreenMessage(FColor::Red,FString(TEXT("Failed creating session")));
+		LogMessage(FColor::Red,FString(TEXT("Failed creating session")));
 	}
 }
 
