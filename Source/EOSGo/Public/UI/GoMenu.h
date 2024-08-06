@@ -23,7 +23,7 @@ protected: //virtual
 
 public:
 	UFUNCTION(BlueprintCallable, Category="EOS-Go|Misc")
-	void MenuSetup(int32 NumberOfPublicConnections = 3, FString TypeOfMatch = FString(TEXT("Lobby")), FString LevelPath = FString(TEXT("/Game/Maps/LobbyMap")));
+	void MenuSetup(int32 NumberOfPublicConnections = 3, FString TypeOfMatch = FString(TEXT("Lobby")), FString LevelPath = FString(TEXT("/EOSGo/Maps/LobbyMap")));
 
 protected:
 	//~ Session callbacks for the custom delegates on the GoSubsystem.
@@ -47,10 +47,14 @@ private:
 	UButton* Host_Button;
 	UPROPERTY(meta = (BindWidget))
 	UButton* Join_Button;
+	UPROPERTY(meta = (BindWidget))
+	UButton* Login_Button;
 
 	UFUNCTION()
 	void HostButtonClicked();
 	UFUNCTION()
 	void JoinButtonClicked();
+	UFUNCTION()
+	void LoginButtonClicked();
 	
 };

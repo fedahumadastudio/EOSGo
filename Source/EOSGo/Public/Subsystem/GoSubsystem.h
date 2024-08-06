@@ -59,7 +59,6 @@ protected:
 private:
 	IOnlineIdentityPtr Identity;
 	IOnlineSessionPtr SessionInterface;
-	TSharedPtr<FOnlineSessionSettings> LastSessionSettings;
 	TSharedPtr<FOnlineSessionSearch> LastSessionSearch;
 
 	//~ Delegates to add to the Online Session Interface delegate list. Each one has its own handle.
@@ -73,10 +72,14 @@ private:
 	FDelegateHandle DestroySessionCompleteDelegateHandle;
 	FOnStartSessionCompleteDelegate StartSessionCompleteDelegate;
 	FDelegateHandle StartSessionCompleteDelegateHandle;
+
+	//~ OnDestroySession utils
+	bool bCreateSessionOnDestroy { false };
+	int32 LastNumberOfPublicConnections = 0;
+	FString LastMatchType;
 };
 
-static void LogMessage(FColor Color, FString Message)
+static void LogMessage(FString Message)
 {
 	UE_LOG(LogTemp, Warning, TEXT("%s"), *Message);
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1,5.f,Color, *Message);
 }
