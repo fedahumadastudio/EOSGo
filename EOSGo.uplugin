@@ -1,18 +1,16 @@
 {
 	"FileVersion": 3,
 	"Version": 1,
-	"VersionName": "1.0.1",
+	"VersionName": "1.0",
 	"FriendlyName": "EOSGo",
 	"Description": "A plugin for handling epic online services.",
 	"Category": "Fedahumada Studio",
-	"CreatedBy": "fedahumada",
+	"CreatedBy": "Fedahumada Studio",
 	"CreatedByURL": "https://github.com/fedahumadastudio",
 	"DocsURL": "",
 	"MarketplaceURL": "",
 	"SupportURL": "",
 	"CanContainContent": true,
-	"IsBetaVersion": true,
-	"IsExperimentalVersion": false,
 	"Installed": false,
 	"Modules": [
 		{
