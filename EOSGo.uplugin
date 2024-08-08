@@ -7,16 +7,19 @@
 	"Category": "Fedahumada Studio",
 	"CreatedBy": "Fedahumada",
 	"CreatedByURL": "https://www.patreon.com/fedahumada",
-	"DocsURL": "https://discord.gg/EXjKRQZuvx",
-	"MarketplaceURL": "",
+	"DocsURL": "https://www.patreon.com/posts/setting-up-eos-109732329?utm_medium=clipboard_copy&utm_source=copyLink&utm_campaign=postshare_creator&utm_content=join_link",
+	"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/08cd49638841432b8688a9de3ecfb87b",
 	"SupportURL": "https://patreon.com/fedahumada",
-	"CanContainContent": true,
+	"CanContainContent",: true,
 	"Installed": false,
 	"Modules": [
 		{
 			"Name": "EOSGo",
 			"Type": "Runtime",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "Default",
+			"PlatformAllowList": [ 
+				"Win64"
+			]
 		}
 	],
 	"Plugins": [
