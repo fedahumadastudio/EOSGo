@@ -1,4 +1,4 @@
-// Copyright Fedahumada - All Rights Reserved.
+// Copyright (c) 2024 Fedahumada Studio. All Rights Reserved.
 
 #include "Subsystem/GoSubsystem.h"
 #include "OnlineSubsystem.h"
