@@ -5,6 +5,8 @@
 #include "OnlineSessionSettings.h"
 #include "Components/Button.h"
 #include "Subsystem/GoSubsystem.h"
+#include "Engine/GameInstance.h"
+#include "Engine/LocalPlayer.h"
 
 bool UGoMenu::Initialize()
 {

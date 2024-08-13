@@ -10,7 +10,7 @@
 	"DocsURL": "https://youtu.be/Yx4NRyi4m4Y",
 	"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/08cd49638841432b8688a9de3ecfb87b",
 	"SupportURL": "https://patreon.com/fedahumada",
-	"EngineVersion": "5.3.0",
+	"EngineVersion": "5.4.3",
 	"CanContainContent": true,
 	"Installed": false,
 	"Modules": [
@@ -19,8 +19,7 @@
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
 			"PlatformAllowList": [ 
-				"Win64",
-				"Linux"
+				"Win64"
 			]
 		}
 	],

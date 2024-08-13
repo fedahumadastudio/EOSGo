@@ -4,6 +4,7 @@
 #include "OnlineSubsystem.h"
 #include "OnlineSubsystemUtils.h"
 #include "OnlineSessionSettings.h"
+#include "Engine/LocalPlayer.h"
 
 UGoSubsystem::UGoSubsystem() :
 /*Bind Delegates*/

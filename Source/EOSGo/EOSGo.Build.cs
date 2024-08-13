@@ -1,7 +1,6 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright (c) 2024 Fedahumada Studio. All Rights Reserved.
 
 using UnrealBuildTool;
-
 public class EOSGo : ModuleRules
 {
 	public EOSGo(ReadOnlyTargetRules Target) : base(Target)
