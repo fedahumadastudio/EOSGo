@@ -1,7 +1,7 @@
 {
 	"FileVersion": 3,
 	"Version": 1,
-	"VersionName": "1.0.1",
+	"VersionName": "1.0.2",
 	"FriendlyName": "EOS Go",
 	"Description": "A plugin for handling epic online services.",
 	"Category": "Fedahumada Studio",
@@ -10,7 +10,7 @@
 	"DocsURL": "https://youtu.be/Yx4NRyi4m4Y",
 	"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/08cd49638841432b8688a9de3ecfb87b",
 	"SupportURL": "https://patreon.com/fedahumada",
-	"EngineVersion": "5.4.3",
+	"EngineVersion": "5.4.0",
 	"CanContainContent": true,
 	"Installed": false,
 	"Modules": [
