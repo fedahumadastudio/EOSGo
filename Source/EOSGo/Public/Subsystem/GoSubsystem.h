@@ -37,9 +37,9 @@ public:
 	
 
 	//~ To handle session functionality. GoMenu clicked buttons will call these.
-	void GoCreateSession(int32 NumberOfPublicConnections, FString MatchType);
+	void GoCreateSession(int32 NumberOfPublicConnections, FString MatchType, int32 ServerPrivateJoinId, bool bIsPrivateSession);
 	FGoOnCreateSessionComplete GoOnCreateSessionComplete;
-	void GoFindSessions(int32 MaxSearchResults);
+	void GoFindSessions(int32 MaxSearchResults, int32 ServerPrivateJoinId);
 	FGoOnFindSessionsComplete GoOnFindSessionsComplete;
 	void GoJoinSession(const FOnlineSessionSearchResult& SessionSearchResult);
 	FGoOnJoinSessionComplete GoOnJoinSessionComplete;
@@ -73,8 +73,10 @@ private:
 	FDelegateHandle StartSessionCompleteDelegateHandle;
 
 	//~ OnDestroySession utils
-	bool bCreateSessionOnDestroy { false };
+	bool bCreateSessionOnDestroy {false};
+	bool bCreatePrivateSession {false};
 	int32 LastNumberOfPublicConnections = 0;
+	int32 LastServerPrivateJoinId = 0;
 	FString LastMatchType;
 };
 

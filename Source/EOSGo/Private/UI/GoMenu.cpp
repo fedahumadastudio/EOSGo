@@ -4,25 +4,33 @@
 #include "OnlineSubsystem.h"
 #include "OnlineSessionSettings.h"
 #include "Components/Button.h"
+#include "Components/TextBlock.h"
 #include "Subsystem/GoSubsystem.h"
 #include "Engine/GameInstance.h"
 #include "Engine/LocalPlayer.h"
+#include "Kismet/GameplayStatics.h"
+#include"Kismet/KismetSystemLibrary.h"
+//#include ""
 
 bool UGoMenu::Initialize()
 {
 	if (!Super::Initialize()) return false;
 
-	if (Host_Button)
-	{
-		Host_Button->OnClicked.AddDynamic(this, &UGoMenu::HostButtonClicked);
-	}
-	if (Join_Button)
-	{
-		Join_Button->OnClicked.AddDynamic(this, &UGoMenu::JoinButtonClicked);
-	}
 	if (Login_Button)
 	{
 		Login_Button->OnClicked.AddDynamic(this, &UGoMenu::LoginButtonClicked);
+	}
+	if (HostLobby_Button)
+	{
+		HostLobby_Button->OnClicked.AddDynamic(this, &UGoMenu::HostLobbyButtonClicked);
+	}
+	if (JoinLobby_Button)
+	{
+		JoinLobby_Button->OnClicked.AddDynamic(this, &UGoMenu::JoinLobbyButtonClicked);
+	}
+	if (Quit_Button)
+	{
+		Quit_Button->OnClicked.AddDynamic(this, &UGoMenu::QuitButtonClicked);
 	}
 	return true;
 }
@@ -33,11 +41,14 @@ void UGoMenu::NativeDestruct()
 	Super::NativeDestruct();
 }
 
-void UGoMenu::MenuSetup(int32 NumberOfPublicConnections, FString TypeOfMatch, FString LevelPath)
+void UGoMenu::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
-	MapToTravel = LevelPath;
-	MatchType = TypeOfMatch;
-	NumberOfConnections = NumberOfPublicConnections;
+	Super::NativeTick(MyGeometry, InDeltaTime);
+}
+
+void UGoMenu::GoMenuSetup(FString LobbyMapPath)
+{
+	LobbyMap = LobbyMapPath;
 	AddToViewport();
 	SetVisibility(ESlateVisibility::Visible);
 	SetIsFocusable(true);
@@ -76,12 +87,12 @@ void UGoMenu::OnCreateSession(bool bWasSuccessful)
 	if (bWasSuccessful)
 	{
 		LogMessage(FString("Session created successfully"));
-		if (UWorld* World = GetWorld()) World->ServerTravel(MapToTravel);
+		if (UWorld* World = GetWorld()) World->ServerTravel(LobbyMap);
 	}
 	else
 	{
 		LogMessage(FString("Failed creating session"));
-		Host_Button->SetIsEnabled(true);
+		HostLobby_Button->SetIsEnabled(true);
 	}
 }
 
@@ -103,7 +114,7 @@ void UGoMenu::OnFindSessions(const TArray<FOnlineSessionSearchResult>& SessionRe
 
 	if (!bWasSuccessful || SessionResults.IsEmpty())
 	{
-		Join_Button->SetIsEnabled(true);	
+		JoinLobby_Button->SetIsEnabled(true);	
 	}
 }
 
@@ -126,7 +137,7 @@ void UGoMenu::OnJoinSession(EOnJoinSessionCompleteResult::Type Result)
 
 	if (Result != EOnJoinSessionCompleteResult::Success)
 	{
-		Join_Button->SetIsEnabled(true);
+		JoinLobby_Button->SetIsEnabled(true);
 	}
 }
 
@@ -138,21 +149,27 @@ void UGoMenu::OnStartSession(bool bWasSuccessful)
 {
 }
 
-void UGoMenu::HostButtonClicked()
-{
-	Host_Button->SetIsEnabled(false);
-	if (GoSubsystem) GoSubsystem->GoCreateSession(NumberOfConnections, MatchType);
-}
-
-void UGoMenu::JoinButtonClicked()
-{
-	Join_Button->SetIsEnabled(false);
-	if (GoSubsystem) GoSubsystem->GoFindSessions(100);
-}
-
 void UGoMenu::LoginButtonClicked()
 {
 	if (GoSubsystem) GoSubsystem->GoEOSLogin("","","accountportal");
+}
+
+void UGoMenu::HostLobbyButtonClicked()
+{
+	HostLobby_Button->SetIsEnabled(false);
+	ServerPrivateJoinId = FMath::RandRange(1111,99999);
+	if (GoSubsystem) GoSubsystem->GoCreateSession(NumberOfConnections, MatchType, ServerPrivateJoinId, bIsPrivate);
+}
+
+void UGoMenu::JoinLobbyButtonClicked()
+{
+	JoinLobby_Button->SetIsEnabled(false);
+	if (GoSubsystem) GoSubsystem->GoFindSessions(100, ServerPrivateJoinId);
+}
+
+void UGoMenu::QuitButtonClicked()
+{
+	if (GoSubsystem) UKismetSystemLibrary::QuitGame(GetWorld(),UGameplayStatics::GetPlayerController(GetWorld(),0),EQuitPreference::Type::Quit,false);
 }
 
 void UGoMenu::MenuTearDown()

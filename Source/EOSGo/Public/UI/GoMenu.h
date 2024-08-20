@@ -19,10 +19,11 @@ class EOSGO_API UGoMenu : public UUserWidget
 protected: //virtual
 	virtual bool Initialize() override;
 	virtual void NativeDestruct() override;
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
-public:
-	UFUNCTION(BlueprintCallable, Category="EOS-Go|Misc")
-	void MenuSetup(int32 NumberOfPublicConnections = 3, FString TypeOfMatch = FString(TEXT("Lobby")), FString LevelPath = FString(TEXT("/EOSGo/Maps/LobbyMap")));
+public:	
+	UFUNCTION(BlueprintCallable, Category="EOS-Go|Setup")
+	void GoMenuSetup(FString LobbyMapPath);
 
 protected:
 	//~ Session callbacks for the custom delegates on the GoSubsystem.
@@ -37,23 +38,35 @@ protected:
 	
 private:
 	TObjectPtr<UGoSubsystem> GoSubsystem; //The subsystem designed to handle online sessions' functionality.
-	FString MapToTravel;
-	FString MatchType;
-	int32 NumberOfConnections;
-	void MenuTearDown();
+
+	//~ Menu setup - session creation parameters
+	FString LobbyMap {FString(TEXT("/EOSGo/Maps/LobbyMap?listen"))};
+	UPROPERTY(BlueprintReadWrite, meta=(AllowPrivateAccess="true"))
+	int32 ServerPrivateJoinId{0};
+	UPROPERTY(BlueprintReadWrite, meta=(AllowPrivateAccess="true"))
+	FString MatchType {FString(TEXT("DUO"))};
+	UPROPERTY(BlueprintReadWrite, meta=(AllowPrivateAccess="true"))
+	int32 NumberOfConnections{2};
+	UPROPERTY(BlueprintReadWrite, meta=(AllowPrivateAccess="true"))
+	bool bIsPrivate{false};
 	
 	UPROPERTY(meta = (BindWidget))
-	UButton* Host_Button;
+	UButton* HostLobby_Button;
 	UPROPERTY(meta = (BindWidget))
-	UButton* Join_Button;
+	UButton* JoinLobby_Button;
 	UPROPERTY(meta = (BindWidget))
 	UButton* Login_Button;
+	UPROPERTY(meta = (BindWidget))
+	UButton* Quit_Button;
 
 	UFUNCTION()
-	void HostButtonClicked();
-	UFUNCTION()
-	void JoinButtonClicked();
-	UFUNCTION()
 	void LoginButtonClicked();
+	UFUNCTION()
+	void HostLobbyButtonClicked();
+	UFUNCTION()
+	void JoinLobbyButtonClicked();
+	UFUNCTION()
+	void QuitButtonClicked();
 	
+	void MenuTearDown();
 };

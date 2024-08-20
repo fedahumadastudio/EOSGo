@@ -75,7 +75,7 @@ void UGoSubsystem::OnCreateSessionComplete(FName SessionName, bool bWasSuccess)
 		GoOnCreateSessionComplete.Broadcast(bWasSuccess);
 	}
 }
-void UGoSubsystem::GoCreateSession(int32 NumberOfPublicConnections, FString MatchType)
+void UGoSubsystem::GoCreateSession(int32 NumberOfPublicConnections, FString MatchType, int32 ServerPrivateJoinId, bool bIsPrivateSession)
 {
 	if (!SessionInterface.IsValid()) return;
 
@@ -83,7 +83,9 @@ void UGoSubsystem::GoCreateSession(int32 NumberOfPublicConnections, FString Matc
 	//~ If same named session exists, it will be deleted.
 	if (ExistingSession != nullptr)
 	{
-		bCreateSessionOnDestroy = true;	
+		bCreateSessionOnDestroy = true;
+		bCreatePrivateSession = bIsPrivateSession;
+		LastServerPrivateJoinId = ServerPrivateJoinId;
 		LastNumberOfPublicConnections = NumberOfPublicConnections;
 		LastMatchType = MatchType;
 		//~ DESTROY
@@ -108,6 +110,13 @@ void UGoSubsystem::GoCreateSession(int32 NumberOfPublicConnections, FString Matc
 	LastSessionSettings->bUsesStats = true; //Needed to keep track of player stats.
 	LastSessionSettings->BuildUniqueId = 1;
 	LastSessionSettings->Set(FName("MATCH_TYPE"), MatchType, EOnlineDataAdvertisementType::ViaOnlineService);
+	LastSessionSettings->Set(FName("SERVER_IS_PRIVATE"), bIsPrivateSession, EOnlineDataAdvertisementType::ViaOnlineService);
+
+	if (bIsPrivateSession)
+	{
+		LastSessionSettings->Set(FName("SERVER_JOIN_ID"), ServerPrivateJoinId, EOnlineDataAdvertisementType::ViaOnlineService);
+	}
+
 
 	//~ CREATE
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
@@ -135,7 +144,7 @@ void UGoSubsystem::OnFindSessionsComplete(bool bWasSuccess)
 	
 	GoOnFindSessionsComplete.Broadcast(LastSessionSearch->SearchResults, bWasSuccess); // 1+ sessions were found.
 }
-void UGoSubsystem::GoFindSessions(int32 MaxSearchResults)
+void UGoSubsystem::GoFindSessions(int32 MaxSearchResults, int32 ServerPrivateJoinId)
 {
 	if (!SessionInterface.IsValid()) return;
 
@@ -143,10 +152,19 @@ void UGoSubsystem::GoFindSessions(int32 MaxSearchResults)
 	FindSessionsCompleteDelegateHandle = SessionInterface->AddOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegate);
 
 	//~ Filter by
+	
 	LastSessionSearch = MakeShareable(new FOnlineSessionSearch());
 	LastSessionSearch->MaxSearchResults = MaxSearchResults;
 	LastSessionSearch->bIsLanQuery = false;
-	LastSessionSearch->QuerySettings.SearchParams.Empty();
+	if (ServerPrivateJoinId > 0)
+	{
+		LastSessionSearch->QuerySettings.Set(FName("SERVER_IS_PRIVATE"), true, EOnlineComparisonOp::Equals);
+		LastSessionSearch->QuerySettings.Set(FName("SERVER_JOIN_ID"), ServerPrivateJoinId, EOnlineComparisonOp::Equals);
+	}
+	else
+	{
+		LastSessionSearch->QuerySettings.Set(FName("SERVER_IS_PRIVATE"), false, EOnlineComparisonOp::Equals);
+	}
 
 	//~ SEARCH
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
@@ -205,7 +223,7 @@ void UGoSubsystem::OnDestroySessionComplete(FName SessionName, bool bWasSuccess)
 	{
 		bCreateSessionOnDestroy = false;
 		GoOnDestroySessionComplete.Broadcast(bWasSuccess);
-		GoCreateSession(LastNumberOfPublicConnections, LastMatchType);
+		GoCreateSession(LastNumberOfPublicConnections, LastMatchType, LastServerPrivateJoinId, bCreatePrivateSession);
 	}
 	
 }
