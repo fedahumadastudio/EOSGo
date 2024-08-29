@@ -18,9 +18,22 @@ StartSessionCompleteDelegate(FOnStartSessionCompleteDelegate::CreateUObject(this
 	{
 		Identity = Subsystem->GetIdentityInterface();
 		SessionInterface = Subsystem->GetSessionInterface();
+		FriendsInterface = Subsystem->GetFriendsInterface();
 	}
 }
 
+
+void UGoSubsystem::OnLoginComplete(int32 LocalUserNum, bool bWasSuccess, const FUniqueNetId& UserId, const FString& Error)
+{
+	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
+	if (Identity->GetLoginStatus(LocalPlayer->GetControllerId()) == ELoginStatus::LoggedIn)
+	{
+		LoggedPlayerUsername = FName(Identity->GetPlayerNickname(LocalPlayer->GetControllerId()));
+		LogMessage("Login Successful");
+	}
+	GoOnLoginComplete.Broadcast(LoggedPlayerUsername);
+	
+}
 void UGoSubsystem::GoEOSLogin(FString Id, FString Token, FString LoginType)
 {
 	if(!Identity.IsValid()) return;
@@ -31,16 +44,15 @@ void UGoSubsystem::GoEOSLogin(FString Id, FString Token, FString LoginType)
 	AccountDetails.Type = LoginType;
 
 	//~ Bind login callback.
-	Identity->OnLoginCompleteDelegates->AddUObject(this, &UGoSubsystem::GoEOSLogin_Response);
+	Identity->OnLoginCompleteDelegates->AddUObject(this, &UGoSubsystem::OnLoginComplete);
 
 	//~ LOGIN
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
-	Identity->Login(LocalPlayer->GetControllerId(), AccountDetails);
-	
-}
-void UGoSubsystem::GoEOSLogin_Response(int32 LocalUserNum, bool bWasSuccess, const FUniqueNetId& UserId, const FString& Error) const
-{
-	bWasSuccess ? LogMessage(FString(TEXT("Login Successful"))) : LogMessage(FString(TEXT("Login Failed")));
+	if (!Identity->Login(LocalPlayer->GetControllerId(), AccountDetails))
+	{
+		LogMessage("Login Failed");
+		GoOnLoginComplete.Broadcast(FName("Unknown"));
+	}
 }
 
 
@@ -51,16 +63,9 @@ bool UGoSubsystem::IsPlayerLoggedIn()
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
 	return Identity->GetLoginStatus(LocalPlayer->GetControllerId()) == ELoginStatus::LoggedIn;
 }
-FString UGoSubsystem::GetPlayerUsername()
+FName UGoSubsystem::GetPlayerUsername()
 {
-	if(!Identity.IsValid()) FString();
-
-	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
-	if (Identity->GetLoginStatus(LocalPlayer->GetControllerId()) == ELoginStatus::LoggedIn)
-	{
-		return Identity->GetPlayerNickname(LocalPlayer->GetControllerId());
-	}
-	return FString();
+	return LoggedPlayerUsername;
 }
 
 
@@ -101,7 +106,7 @@ void UGoSubsystem::GoCreateSession(int32 NumberOfPublicConnections, FString Matc
 	LastSessionSettings->NumPublicConnections = NumberOfPublicConnections; 
 	LastSessionSettings->bUsesPresence = true;   //No presence on dedicated server. This requires a local user.
 	LastSessionSettings->bAllowJoinViaPresence = true;
-	LastSessionSettings->bAllowJoinViaPresenceFriendsOnly = false;
+	LastSessionSettings->bAllowJoinViaPresenceFriendsOnly = true;
 	LastSessionSettings->bAllowInvites = true;    //Allow inviting players into session. This requires presence and a local user. 
 	LastSessionSettings->bAllowJoinInProgress = true; //Once the session is started, no one can join.
 	LastSessionSettings->bUseLobbiesIfAvailable = false; 
@@ -114,6 +119,7 @@ void UGoSubsystem::GoCreateSession(int32 NumberOfPublicConnections, FString Matc
 
 	if (bIsPrivateSession)
 	{
+		PublicServerJoinId = ServerPrivateJoinId;
 		LastSessionSettings->Set(FName("SERVER_JOIN_ID"), ServerPrivateJoinId, EOnlineDataAdvertisementType::ViaOnlineService);
 	}
 
@@ -126,6 +132,7 @@ void UGoSubsystem::GoCreateSession(int32 NumberOfPublicConnections, FString Matc
 		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
 		//~ Broadcast Go Subsystem Delegate - Creation not successful.
 		GoOnCreateSessionComplete.Broadcast(false);
+		PublicServerJoinId = 0;
 	}
 }
 
@@ -170,7 +177,7 @@ void UGoSubsystem::GoFindSessions(int32 MaxSearchResults, int32 ServerPrivateJoi
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
 	if (LocalPlayer && !SessionInterface->FindSessions(0, LastSessionSearch.ToSharedRef()))
 	{
-		LogMessage(FString("Searching for sessions failed"));
+		LogMessage("Searching for sessions failed");
 		//~ If searching wasn't successful, clear delegate of the delegate list.
 		SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
 		//~ Broadcast Go Subsystem Delegate - Searching wasn't successful.
@@ -224,8 +231,10 @@ void UGoSubsystem::OnDestroySessionComplete(FName SessionName, bool bWasSuccess)
 		bCreateSessionOnDestroy = false;
 		GoOnDestroySessionComplete.Broadcast(bWasSuccess);
 		GoCreateSession(LastNumberOfPublicConnections, LastMatchType, LastServerPrivateJoinId, bCreatePrivateSession);
+		return;
 	}
-	
+
+	GoOnDestroySessionComplete.Broadcast(bWasSuccess);
 }
 void UGoSubsystem::GoDestroySession()
 {
@@ -258,11 +267,36 @@ void UGoSubsystem::GoStartSession()
 	
 }
 
+/*
 
+void UGoSubsystem::OnReadFriendsListComplete(int32 LocalUserNum, bool bWasSuccessful, const FString& ListName, const FString& ErrorStr)
+{
+	if (!bWasSuccessful) LogMessage("Error reading friends list. Error:" + ErrorStr);
 
+	//~ Broadcast Go Subsystem Delegate - Searching successful.
+	if (FriendsInterface) FriendsInterface->GetFriendsList(0,FString(""), FriendsList);
+	
+	if (FriendsList.IsEmpty())
+	{
+		LogMessage("Friends list empty.");
+		GoOnReadFriendsListComplete.Broadcast(TArray<TSharedRef<FOnlineFriend>>(), bWasSuccessful);
+		return;
+	}
 
+	GoOnReadFriendsListComplete.Broadcast(FriendsList, bWasSuccessful);
+}
+void UGoSubsystem::GoReadFriendsList()
+{
+	if (!FriendsInterface.IsValid()) return;
 
+	//~ READ
+	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
+	if (LocalPlayer && !FriendsInterface->ReadFriendsList(0, FString(""), FOnReadFriendsListComplete::CreateUObject(this, &UGoSubsystem::OnReadFriendsListComplete)))
+	{
+		LogMessage("Read friends list failed");
+		//~ Broadcast Go Subsystem Delegate - Read friends list wasn't successful.
+		GoOnReadFriendsListComplete.Broadcast(TArray<TSharedRef<FOnlineFriend>>(),false);
+	}
+}
 
-
-
-
+*/

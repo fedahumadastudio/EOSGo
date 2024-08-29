@@ -10,10 +10,10 @@
 #include "Engine/LocalPlayer.h"
 #include "Kismet/GameplayStatics.h"
 #include"Kismet/KismetSystemLibrary.h"
-//#include ""
 
 bool UGoMenu::Initialize()
 {
+	
 	if (!Super::Initialize()) return false;
 
 	if (Login_Button)
@@ -41,11 +41,6 @@ void UGoMenu::NativeDestruct()
 	Super::NativeDestruct();
 }
 
-void UGoMenu::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
-{
-	Super::NativeTick(MyGeometry, InDeltaTime);
-}
-
 void UGoMenu::GoMenuSetup(FString LobbyMapPath)
 {
 	LobbyMap = LobbyMapPath;
@@ -69,7 +64,6 @@ void UGoMenu::GoMenuSetup(FString LobbyMapPath)
 	{
 		GoSubsystem = GameInstance->GetSubsystem<UGoSubsystem>();
 	}
-
 	
 	if (IsValid(GoSubsystem))
 	{
@@ -77,8 +71,6 @@ void UGoMenu::GoMenuSetup(FString LobbyMapPath)
 		GoSubsystem->GoOnCreateSessionComplete.AddDynamic(this, &UGoMenu::OnCreateSession);
 		GoSubsystem->GoOnFindSessionsComplete.AddUObject(this, &UGoMenu::OnFindSessions);
 		GoSubsystem->GoOnJoinSessionComplete.AddUObject(this, &UGoMenu::OnJoinSession);
-		GoSubsystem->GoOnDestroySessionComplete.AddDynamic(this, &UGoMenu::OnDestroySession);
-		GoSubsystem->GoOnStartSessionComplete.AddDynamic(this, &UGoMenu::OnStartSession);
 	}
 }
 
@@ -86,12 +78,12 @@ void UGoMenu::OnCreateSession(bool bWasSuccessful)
 {
 	if (bWasSuccessful)
 	{
-		LogMessage(FString("Session created successfully"));
+		LogMessage("Session created successfully!");
 		if (UWorld* World = GetWorld()) World->ServerTravel(LobbyMap);
 	}
 	else
 	{
-		LogMessage(FString("Failed creating session"));
+		LogMessage("Failed creating session!");
 		HostLobby_Button->SetIsEnabled(true);
 	}
 }
@@ -99,7 +91,7 @@ void UGoMenu::OnCreateSession(bool bWasSuccessful)
 void UGoMenu::OnFindSessions(const TArray<FOnlineSessionSearchResult>& SessionResults, bool bWasSuccessful)
 {
 	if (!IsValid(GoSubsystem)) return;
-	if (SessionResults.IsEmpty()) LogMessage(FString("No sessions found!"));
+	if (SessionResults.IsEmpty()) LogMessage("No sessions found!");
 
 	for (auto Result : SessionResults)
 	{
@@ -129,7 +121,7 @@ void UGoMenu::OnJoinSession(EOnJoinSessionCompleteResult::Type Result)
 			SessionInterface->GetResolvedConnectString(NAME_GameSession, Address);
 			if (APlayerController* PlayerController = GetGameInstance()->GetFirstLocalPlayerController())
 			{
-				LogMessage(FString(TEXT("Traveling...")));
+				LogMessage("Traveling...");
 				PlayerController->ClientTravel(Address, TRAVEL_Absolute);
 			}
 		}
@@ -141,17 +133,33 @@ void UGoMenu::OnJoinSession(EOnJoinSessionCompleteResult::Type Result)
 	}
 }
 
-void UGoMenu::OnDestroySession(bool bWasSuccessful)
-{
-}
-
-void UGoMenu::OnStartSession(bool bWasSuccessful)
-{
-}
-
 void UGoMenu::LoginButtonClicked()
 {
-	if (GoSubsystem) GoSubsystem->GoEOSLogin("","","accountportal");
+	if (!IsValid(GoSubsystem)) return;
+	
+	FString LoginType = "";
+	FString Token = "";
+	FString Id = "";
+	
+	if (FParse::Value(FCommandLine::Get(), TEXT("-AUTH_TYPE="), LoginType))
+	{
+		if (FParse::Value(FCommandLine::Get(), TEXT("-AUTH_TOKEN="), Token))
+		{
+			if (FParse::Value(FCommandLine::Get(), TEXT("-AUTH_ID="), Id))
+			{
+				LogMessage("Login Auth Data Retrived: AUTH_TYPE=" + LoginType + " | AUTH_TOKEN=" + Token + " | AUTH_ID=" + Id);
+			}
+		}
+	}
+	
+	if (LoginType != "" && Token != "" && Id != "")
+	{
+		GoSubsystem->GoEOSLogin(Id,Token,LoginType);
+	}
+	else
+	{
+		GoSubsystem->GoEOSLogin("","","accountportal");
+	}
 }
 
 void UGoMenu::HostLobbyButtonClicked()

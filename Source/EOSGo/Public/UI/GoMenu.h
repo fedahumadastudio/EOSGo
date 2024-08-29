@@ -19,8 +19,7 @@ class EOSGO_API UGoMenu : public UUserWidget
 protected: //virtual
 	virtual bool Initialize() override;
 	virtual void NativeDestruct() override;
-	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
-
+	
 public:	
 	UFUNCTION(BlueprintCallable, Category="EOS-Go|Setup")
 	void GoMenuSetup(FString LobbyMapPath);
@@ -31,13 +30,10 @@ protected:
 	void OnCreateSession(bool bWasSuccessful);
 	void OnFindSessions(const TArray<FOnlineSessionSearchResult>& SessionResults, bool  bWasSuccessful);
 	void OnJoinSession(EOnJoinSessionCompleteResult::Type Result);
-	UFUNCTION()
-	void OnDestroySession(bool bWasSuccessful);
-	UFUNCTION()
-	void OnStartSession(bool bWasSuccessful);
 	
 private:
-	TObjectPtr<UGoSubsystem> GoSubsystem; //The subsystem designed to handle online sessions' functionality.
+	//The subsystem designed to handle online functionality.
+	TObjectPtr<UGoSubsystem> GoSubsystem;
 
 	//~ Menu setup - session creation parameters
 	FString LobbyMap {FString(TEXT("/EOSGo/Maps/LobbyMap?listen"))};
