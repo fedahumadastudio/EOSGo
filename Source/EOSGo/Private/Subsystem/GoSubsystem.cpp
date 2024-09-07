@@ -82,58 +82,75 @@ void UGoSubsystem::OnCreateSessionComplete(FName SessionName, bool bWasSuccess)
 }
 void UGoSubsystem::GoCreateSession(int32 NumberOfPublicConnections, FString MatchType, int32 ServerPrivateJoinId, bool bIsPrivateSession)
 {
-	if (!SessionInterface.IsValid()) return;
+    if (!SessionInterface.IsValid()) return;
 
-	auto ExistingSession = SessionInterface->GetNamedSession(NAME_GameSession);
+    auto ExistingSession = SessionInterface->GetNamedSession(NAME_GameSession);
 	//~ If same named session exists, it will be deleted.
-	if (ExistingSession != nullptr)
-	{
-		bCreateSessionOnDestroy = true;
-		bCreatePrivateSession = bIsPrivateSession;
-		LastServerPrivateJoinId = ServerPrivateJoinId;
-		LastNumberOfPublicConnections = NumberOfPublicConnections;
-		LastMatchType = MatchType;
-		//~ DESTROY
-		GoDestroySession();
-	}
+    if (ExistingSession != nullptr)
+    {
+        bCreateSessionOnDestroy = true;
+        bCreatePrivateSession = bIsPrivateSession;
+        LastServerPrivateJoinId = ServerPrivateJoinId;
+        LastNumberOfPublicConnections = NumberOfPublicConnections;
+        LastMatchType = MatchType;
+        GoDestroySession();
+    }
+
 	//~ Store the delegate in a FDelegateHandle, so we can later remove it from the delegate list.
-	CreateSessionCompleteDelegateHandle = SessionInterface->AddOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegate);
+    CreateSessionCompleteDelegateHandle = SessionInterface->AddOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegate);
 
 	//~ Set session settings
-	TSharedRef<FOnlineSessionSettings> LastSessionSettings = MakeShared<FOnlineSessionSettings>();
-	LastSessionSettings->bIsDedicated = false; 
-	LastSessionSettings->bIsLANMatch = false;
-	LastSessionSettings->NumPublicConnections = NumberOfPublicConnections; 
-	LastSessionSettings->bUsesPresence = true;   //No presence on dedicated server. This requires a local user.
-	LastSessionSettings->bAllowJoinViaPresence = true;
-	LastSessionSettings->bAllowJoinViaPresenceFriendsOnly = true;
-	LastSessionSettings->bAllowInvites = true;    //Allow inviting players into session. This requires presence and a local user. 
-	LastSessionSettings->bAllowJoinInProgress = true; //Once the session is started, no one can join.
-	LastSessionSettings->bUseLobbiesIfAvailable = false; 
-	LastSessionSettings->bUseLobbiesVoiceChatIfAvailable = false; //We will also enable voice
-	LastSessionSettings->bShouldAdvertise = true; //This creates a public match and will be searchable.
-	LastSessionSettings->bUsesStats = true; //Needed to keep track of player stats.
-	LastSessionSettings->BuildUniqueId = 1;
-	LastSessionSettings->Set(FName("MATCH_TYPE"), MatchType, EOnlineDataAdvertisementType::ViaOnlineService);
-	LastSessionSettings->Set(FName("SERVER_IS_PRIVATE"), bIsPrivateSession, EOnlineDataAdvertisementType::ViaOnlineService);
+    TSharedPtr<FOnlineSessionSettings> LastSessionSettings = MakeShared<FOnlineSessionSettings>();
+    LastSessionSettings->bIsDedicated = false;
+    LastSessionSettings->bIsLANMatch = false;
+    LastSessionSettings->NumPublicConnections = NumberOfPublicConnections;
+    LastSessionSettings->bUsesPresence = true;
+    LastSessionSettings->bAllowJoinViaPresence = true;
+    LastSessionSettings->bAllowJoinViaPresenceFriendsOnly = true;
+    LastSessionSettings->bAllowInvites = true;
+    LastSessionSettings->bAllowJoinInProgress = true;
+    LastSessionSettings->bUseLobbiesIfAvailable = false;
+    LastSessionSettings->bUseLobbiesVoiceChatIfAvailable = false;
+    LastSessionSettings->bShouldAdvertise = true;
+    LastSessionSettings->bUsesStats = true;
+    LastSessionSettings->BuildUniqueId = 1;
+    LastSessionSettings->Set(FName("MATCH_TYPE"), MatchType, EOnlineDataAdvertisementType::ViaOnlineService);
+    LastSessionSettings->Set(FName("SERVER_IS_PRIVATE"), bIsPrivateSession, EOnlineDataAdvertisementType::ViaOnlineService);
 
-	if (bIsPrivateSession)
-	{
-		PublicServerJoinId = ServerPrivateJoinId;
-		LastSessionSettings->Set(FName("SERVER_JOIN_ID"), ServerPrivateJoinId, EOnlineDataAdvertisementType::ViaOnlineService);
-	}
+	//~ Checks if Private Session was toggled and sets a Server Join Id to access to this session.
+    if (bIsPrivateSession)
+    {
+        PublicServerJoinId = ServerPrivateJoinId;
+        LastSessionSettings->Set(FName("SERVER_JOIN_ID"), ServerPrivateJoinId, EOnlineDataAdvertisementType::ViaOnlineService);
+    }
 
+    const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
+    if (!LocalPlayer)
+    {
+        UE_LOG(LogTemp, Error, TEXT("LocalPlayer is invalid!"));
+        GoOnCreateSessionComplete.Broadcast(false);
+        return;
+    }
+
+	//~ UniqueNetId& required to hosting the session.
+	FUniqueNetIdRepl UniqueNetIdRepl = LocalPlayer->GetUniqueNetIdForPlatformUser();
+    TSharedPtr<const FUniqueNetId> UniqueNetId = UniqueNetIdRepl.GetUniqueNetId();
+    if (!UniqueNetId.IsValid())
+    {
+        UE_LOG(LogTemp, Error, TEXT("UniqueNetId is invalid!"));
+        GoOnCreateSessionComplete.Broadcast(false);
+        return;
+    }
 
 	//~ CREATE
-	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
-	if (!SessionInterface->CreateSession(*LocalPlayer->GetPreferredUniqueNetId(),NAME_GameSession,*LastSessionSettings))
-	{
-		//~ If it doesn't create the session, clear delegate of the delegate list.
-		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
-		//~ Broadcast Go Subsystem Delegate - Creation not successful.
-		GoOnCreateSessionComplete.Broadcast(false);
-		PublicServerJoinId = 0;
-	}
+    if (!SessionInterface->CreateSession(*UniqueNetId, NAME_GameSession, *LastSessionSettings))
+    {
+    	//~ If it doesn't create the session, clear delegate of the delegate list.
+        SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
+    	//~ Broadcast Go Subsystem Delegate - Creation not successful.
+        GoOnCreateSessionComplete.Broadcast(false);
+        PublicServerJoinId = 0;
+    }
 }
 
 

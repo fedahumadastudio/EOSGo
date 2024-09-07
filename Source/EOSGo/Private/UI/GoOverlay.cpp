@@ -4,7 +4,7 @@
 #include "UI/GoOverlay.h"
 #include "Subsystem/GoSubsystem.h"
 #include "Components/Button.h"
-#include "Kismet/GameplayStatics.h"
+#include "Game/GoGameModeBase.h"
 
 bool UGoOverlay::Initialize()
 {
@@ -63,22 +63,33 @@ void UGoOverlay::GoOverlaySetup()
 
 void UGoOverlay::OnDestroySession(bool bWasSuccessful)
 {
-	if (bWasSuccessful)
-	{
-		LogMessage("Session destroyed successfully!");
-		if (UWorld* World = GetWorld()) UGameplayStatics::OpenLevel(World, MainMenuMap, true);
-	}
-	else
+	if (!bWasSuccessful)
 	{
 		LogMessage("Failed destroying session!");
 		ExitSession_Button->SetIsEnabled(true);
+		return;
 	}
+	
+	if (UWorld* World = GetWorld())
+	{
+		if (AGameModeBase* GameMode = World->GetAuthGameMode())
+		{
+			GameMode->ReturnToMainMenuHost();
+		}
+		else
+		{
+			if (APlayerController* PlayerController = World->GetFirstPlayerController())
+			{
+				PlayerController->ClientReturnToMainMenuWithTextReason(FText());
+			}
+		}
+	}
+	LogMessage("Session destroyed successfully!");
 }
 
 void UGoOverlay::OnStartSession(bool bWasSuccessful)
 {
 }
-
 
 /*
 void UGoOverlay::OnReadFriendsList(TArray<TSharedRef<FOnlineFriend>> FriendsArray, bool bWasSuccessful)

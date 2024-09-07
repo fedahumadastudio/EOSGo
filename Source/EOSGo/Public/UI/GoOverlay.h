@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "GoOverlay.generated.h"
+class AGoGameModeBase;
 class FOnlineFriend;
 class UGoSubsystem;
 class UButton;
@@ -37,9 +38,6 @@ protected:
 private:
 	//The subsystem designed to handle online functionality.
 	TObjectPtr<UGoSubsystem> GoSubsystem;
-
-	//~ Overlay setup - session creation parameters
-	FName MainMenuMap {FString(TEXT("/EOSGo/Maps/MainMenuMap"))};
 	
 	UPROPERTY(meta = (BindWidget))
 	UButton* ExitSession_Button;
