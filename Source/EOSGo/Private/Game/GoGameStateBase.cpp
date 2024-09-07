@@ -1,5 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
+// Copyright (c) 2024 Fedahumada Studio. All Rights Reserved.
 
 #include "Game/GoGameStateBase.h"
 #include "Game/GoGameModeBase.h"
@@ -19,7 +18,8 @@ AGoGameStateBase::AGoGameStateBase()
 	if (GoGameModeBase)
 	{
 		//~ Bind callbacks.
-		GoGameModeBase->GoOnRegisterPlayerComplete.AddDynamic(this, &AGoGameStateBase::OnRegisterPlayer);
+		GoGameModeBase->GoOnRegisterPlayerComplete.AddDynamic(this, &AGoGameStateBase::OnRegisteredPlayerListChanged);
+		GoGameModeBase->GoOnUnregisterPlayerComplete.AddDynamic(this, &AGoGameStateBase::OnRegisteredPlayerListChanged);
 	}
 }
 
@@ -27,15 +27,15 @@ void AGoGameStateBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	// Add the PlayerList to the list of replicated properties
+	// Add the PlayerList to the list of replicated properties.
 	DOREPLIFETIME(AGoGameStateBase, PlayerList);
 }
 
-void AGoGameStateBase::OnRegisterPlayer(bool bWasSuccessful)
+void AGoGameStateBase::OnRegisteredPlayerListChanged(bool bWasSuccessful)
 {
 	if (!bWasSuccessful) return;
 	
-	//~ Broadcast the updated player list.
+	//~ UPDATE PLAYER LIST
 	if (HasAuthority())
 	{
 		PlayerList.Empty();
@@ -43,7 +43,7 @@ void AGoGameStateBase::OnRegisterPlayer(bool bWasSuccessful)
 		{
 			PlayerList.AddUnique(FName(PlayerState->GetPlayerName()));
 		}
-		
+		//~ Broadcast the updated player list.
 		OnPlayerListChanged.Broadcast(PlayerList);
 	}
 }

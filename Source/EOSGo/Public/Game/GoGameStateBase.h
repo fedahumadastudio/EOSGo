@@ -1,15 +1,12 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
+// Copyright (c) 2024 Fedahumada Studio. All Rights Reserved.
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/ListView.h"
 #include "GameFramework/GameStateBase.h"
 #include "GoGameStateBase.generated.h"
 class AGoGameModeBase;
 
-
-//~ DELEGATES
+//~ GO GAME STATE DELEGATES
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerListChangedSignature, const TArray<FName>&, PlayerList);
 
 /**
@@ -30,14 +27,13 @@ protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION()
-	void OnRegisterPlayer(bool bWasSuccessful);
+	void OnRegisteredPlayerListChanged(bool bWasSuccessful);
 
 private:
 	TObjectPtr<AGoGameModeBase> GoGameModeBase;
 	
 	UPROPERTY(ReplicatedUsing="OnRep_PlayerList")
 	TArray<FName> PlayerList;
-	
 	UFUNCTION()
 	void OnRep_PlayerList();
 	
