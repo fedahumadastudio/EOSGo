@@ -133,7 +133,7 @@ void UGoMenu::OnJoinSession(FName SessionName, EOnJoinSessionCompleteResult::Typ
 
 	//~ TRAVEL
 	FString ConnectionInfo;
-	SessionInterface->GetResolvedConnectString(SessionName, ConnectionInfo);
+	SessionInterface->GetResolvedConnectString(NAME_GameSession, ConnectionInfo);
 	
 	if (!ConnectionInfo.IsEmpty())
 	{
