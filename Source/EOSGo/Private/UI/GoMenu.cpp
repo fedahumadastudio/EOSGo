@@ -1,7 +1,7 @@
 // Copyright (c) 2024 Fedahumada Studio. All Rights Reserved.
 
 #include "UI/GoMenu.h"
-#include "OnlineSubsystem.h"
+#include "EOSGo.h"
 #include "OnlineSessionSettings.h"
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
@@ -13,7 +13,6 @@
 
 bool UGoMenu::Initialize()
 {
-	
 	if (!Super::Initialize()) return false;
 
 	if (Login_Button)
@@ -64,6 +63,11 @@ void UGoMenu::GoMenuSetup(FString LobbyMapPath)
 	{
 		GoSubsystem = GameInstance->GetSubsystem<UGoSubsystem>();
 	}
+
+	if (IOnlineSubsystem* Subsystem = IOnlineSubsystem::Get())
+	{
+		SessionInterface = Subsystem->GetSessionInterface();
+	}
 	
 	if (IsValid(GoSubsystem))
 	{
@@ -90,46 +94,56 @@ void UGoMenu::OnCreateSession(bool bWasSuccessful)
 
 void UGoMenu::OnFindSessions(const TArray<FOnlineSessionSearchResult>& SessionResults, bool bWasSuccessful)
 {
+	//~ Validations
 	if (!IsValid(GoSubsystem)) return;
-	if (SessionResults.IsEmpty()) LogMessage("No sessions found!");
-
-	for (auto Result : SessionResults)
+	if (!bWasSuccessful)
 	{
-		FString SettingsValue;
-		Result.Session.SessionSettings.Get(FName("MATCH_TYPE"), SettingsValue);
-		if (SettingsValue == MatchType)
-		{
-			GoSubsystem->GoJoinSession(Result);
-			return;
-		}
+		LogMessage("Search was not successful!");
+		JoinLobby_Button->SetIsEnabled(true);
+		return;
 	}
-
-	if (!bWasSuccessful || SessionResults.IsEmpty())
+	if (SessionResults.IsEmpty())
 	{
-		JoinLobby_Button->SetIsEnabled(true);	
+		LogMessage("No sessions found!");
+		JoinLobby_Button->SetIsEnabled(true);
+		return;
+	}
+	
+	//~ Session Results Filter & Join
+	for (const auto& Result : SessionResults)
+	{
+		GoSubsystem->GoJoinSession(Result);
+		return;
 	}
 }
 
-void UGoMenu::OnJoinSession(EOnJoinSessionCompleteResult::Type Result)
+void UGoMenu::OnJoinSession(FName SessionName, EOnJoinSessionCompleteResult::Type Result)
 {
-	if (IOnlineSubsystem* Subsystem = IOnlineSubsystem::Get())
-	{
-		IOnlineSessionPtr SessionInterface = Subsystem->GetSessionInterface();
-		if (SessionInterface.IsValid())
-		{
-			FString Address;
-			SessionInterface->GetResolvedConnectString(NAME_GameSession, Address);
-			if (APlayerController* PlayerController = GetGameInstance()->GetFirstLocalPlayerController())
-			{
-				LogMessage("Traveling...");
-				PlayerController->ClientTravel(Address, TRAVEL_Absolute);
-			}
-		}
-	}
-
+	//~ Validations
 	if (Result != EOnJoinSessionCompleteResult::Success)
 	{
 		JoinLobby_Button->SetIsEnabled(true);
+		return;
+	}
+	if (!SessionInterface.IsValid()) 
+	{
+		LogMessage("Invalid Session Interface!");
+		return;
+	}
+
+	//~ TRAVEL
+	FString ConnectionInfo;
+	SessionInterface->GetResolvedConnectString(SessionName, ConnectionInfo);
+	
+	if (!ConnectionInfo.IsEmpty())
+	{
+		if (APlayerController* PlayerController = GetGameInstance()->GetFirstLocalPlayerController())
+		{
+			LogMessage("Traveling...");
+			PlayerController->ClientTravel(ConnectionInfo, TRAVEL_Absolute);
+			return;
+		}
+		LogMessage("Player could not travel. ClientTravel Failed!");
 	}
 }
 
@@ -151,7 +165,8 @@ void UGoMenu::LoginButtonClicked()
 			}
 		}
 	}
-	
+
+	//~ Call Login 
 	if (LoginType != "" && Token != "" && Id != "")
 	{
 		GoSubsystem->GoEOSLogin(Id,Token,LoginType);
@@ -165,19 +180,24 @@ void UGoMenu::LoginButtonClicked()
 void UGoMenu::HostLobbyButtonClicked()
 {
 	HostLobby_Button->SetIsEnabled(false);
-	ServerPrivateJoinId = FMath::RandRange(1111,99999);
-	if (GoSubsystem) GoSubsystem->GoCreateSession(NumberOfConnections, MatchType, ServerPrivateJoinId, bIsPrivate);
+	ServerJoinId = FMath::RandRange(10000,99999);
+
+	//~ Call create session
+	if (GoSubsystem) GoSubsystem->GoCreateSession(NumberOfConnections, MatchType, ServerJoinId, bIsPrivate);
 }
 
 void UGoMenu::JoinLobbyButtonClicked()
 {
 	JoinLobby_Button->SetIsEnabled(false);
-	if (GoSubsystem) GoSubsystem->GoFindSessions(100, ServerPrivateJoinId);
+
+	//~ Call find sessions
+	if (GoSubsystem) GoSubsystem->GoFindSessions(ServerJoinId);
+	ServerJoinId = 0;
 }
 
 void UGoMenu::QuitButtonClicked()
 {
-	if (GoSubsystem) UKismetSystemLibrary::QuitGame(GetWorld(),UGameplayStatics::GetPlayerController(GetWorld(),0),EQuitPreference::Type::Quit,false);
+	UKismetSystemLibrary::QuitGame(GetWorld(),UGameplayStatics::GetPlayerController(GetWorld(),0),EQuitPreference::Type::Quit,false);
 }
 
 void UGoMenu::MenuTearDown()

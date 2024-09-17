@@ -14,3 +14,8 @@ public:
 	virtual void ShutdownModule() override;
 	
 };
+
+static void LogMessage(FString Message)
+{
+	UE_LOG(LogTemp, Warning, TEXT("%s"), *Message);
+}

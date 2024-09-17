@@ -29,22 +29,23 @@ protected:
 	UFUNCTION()
 	void OnCreateSession(bool bWasSuccessful);
 	void OnFindSessions(const TArray<FOnlineSessionSearchResult>& SessionResults, bool  bWasSuccessful);
-	void OnJoinSession(EOnJoinSessionCompleteResult::Type Result);
+	void OnJoinSession(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
 	
 private:
 	//The subsystem designed to handle online functionality.
 	TObjectPtr<UGoSubsystem> GoSubsystem;
+	IOnlineSessionPtr SessionInterface;
 
 	//~ Menu setup - session creation parameters
 	FString LobbyMap {FString(TEXT("/EOSGo/Maps/LobbyMap?listen"))};
 	UPROPERTY(BlueprintReadWrite, meta=(AllowPrivateAccess="true"))
-	int32 ServerPrivateJoinId{0};
+	int64 ServerJoinId = 0;
 	UPROPERTY(BlueprintReadWrite, meta=(AllowPrivateAccess="true"))
 	FString MatchType {FString(TEXT("DUO"))};
 	UPROPERTY(BlueprintReadWrite, meta=(AllowPrivateAccess="true"))
 	int32 NumberOfConnections{2};
 	UPROPERTY(BlueprintReadWrite, meta=(AllowPrivateAccess="true"))
-	bool bIsPrivate{false};
+	bool bIsPrivate = false;
 	
 	UPROPERTY(meta = (BindWidget))
 	UButton* HostLobby_Button;

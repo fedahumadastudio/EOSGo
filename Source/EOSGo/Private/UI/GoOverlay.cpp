@@ -1,6 +1,7 @@
 // Copyright (c) 2024 Fedahumada Studio. All Rights Reserved.
 
 #include "UI/GoOverlay.h"
+#include "EOSGo.h"
 #include "Subsystem/GoSubsystem.h"
 #include "Components/Button.h"
 #include "Game/GoGameModeBase.h"
@@ -13,17 +14,12 @@ bool UGoOverlay::Initialize()
 	{
 		ExitSession_Button->OnClicked.AddDynamic(this, &UGoOverlay::ExitSessionButtonClicked);
 	}
-	/*
-	if (FriendsList_Button)
-	{
-		FriendsList_Button->OnClicked.AddDynamic(this, &UGoOverlay::FriendsListButtonClicked);
-	}
-	*/
 	return true;
 }
 
 void UGoOverlay::NativeDestruct()
 {
+	MenuTearDown();
 	Super::NativeDestruct();
 }
 
@@ -49,13 +45,12 @@ void UGoOverlay::GoOverlaySetup()
 	{
 		GoSubsystem = GameInstance->GetSubsystem<UGoSubsystem>();
 	}
-
+	
 	if (IsValid(GoSubsystem))
 	{
 		//~ Bind session callbacks.
 		GoSubsystem->GoOnDestroySessionComplete.AddDynamic(this, &UGoOverlay::OnDestroySession);
 		GoSubsystem->GoOnStartSessionComplete.AddDynamic(this, &UGoOverlay::OnStartSession);
-		//GoSubsystem->GoOnReadFriendsListComplete.AddUObject(this, &UGoOverlay::OnReadFriendsList);
 	}
 }
 
@@ -90,33 +85,19 @@ void UGoOverlay::OnStartSession(bool bWasSuccessful)
 {
 }
 
-/*
-void UGoOverlay::OnReadFriendsList(TArray<TSharedRef<FOnlineFriend>> FriendsArray, bool bWasSuccessful)
-{
-	if (!IsValid(GoSubsystem)) return;
-	if (FriendsArray.IsEmpty()) LogMessage("Friends list empty!");
-
-	for (TSharedRef<FOnlineFriend> Friend : FriendsArray)
-	{
-		FString FriendName = Friend.Get().GetRealName();
-		LogMessage(FriendName);
-	}
-}
-
-void UGoOverlay::FriendsListButtonClicked()
-{
-	if (GoSubsystem) GoSubsystem->GoReadFriendsList();
-}
-*/
-
 void UGoOverlay::ExitSessionButtonClicked()
 {
 	ExitSession_Button->SetIsEnabled(false);
+
+	//~ Call destroy session
 	if (GoSubsystem) GoSubsystem->GoDestroySession();
 }
 
 void UGoOverlay::MenuTearDown()
 {
+	//~ Call destroy session
+	if (GoSubsystem) GoSubsystem->GoDestroySession();
+	
 	RemoveFromParent();
 	if (const UWorld* World = GetWorld())
 	{

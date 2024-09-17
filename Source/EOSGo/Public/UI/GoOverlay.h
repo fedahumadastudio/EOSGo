@@ -32,8 +32,6 @@ protected:
 	UFUNCTION()
 	void OnStartSession(bool bWasSuccessful);
 	
-	//void OnReadFriendsList(TArray<TSharedRef<FOnlineFriend>> FriendsArray, bool bWasSuccessful);
-	
 private:
 	//The subsystem designed to handle online functionality.
 	TObjectPtr<UGoSubsystem> GoSubsystem;

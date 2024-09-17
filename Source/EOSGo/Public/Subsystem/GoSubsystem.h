@@ -2,22 +2,19 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Interfaces/OnlineFriendsInterface.h"
 #include "Interfaces/OnlineIdentityInterface.h"
 #include "Interfaces/OnlineSessionInterface.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "GoSubsystem.generated.h"
 
 //~ GO SUBSYSTEM DELEGATES
-							//For GoMenu class to bind callbacks to.
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGoOnLoginComplete, FName, Username);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGoOnCreateSessionComplete, bool, bWasSuccessful);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGoOnUpdateSessionComplete, bool, bWasSuccess);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FGoOnFindSessionsComplete, const TArray<FOnlineSessionSearchResult>& SessionResults, bool  bWasSuccessful);
-DECLARE_MULTICAST_DELEGATE_OneParam(FGoOnJoinSessionComplete, EOnJoinSessionCompleteResult::Type Result);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FGoOnJoinSessionComplete, FName SessionName, EOnJoinSessionCompleteResult::Type Result);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGoOnDestroySessionComplete, bool, bWasSuccessful);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGoOnStartSessionComplete, bool, bWasSuccessful);
-							//For GoOverlay class to bind callbacks to.
-//DECLARE_MULTICAST_DELEGATE_TwoParams(FGoOnReadFriendsListComplete, TArray<TSharedRef<FOnlineFriend>> FriendsArray, bool bWasSuccessful);
 
 /**
  * 
@@ -42,9 +39,11 @@ public:
 
 	
 	//~ To handle session functionality.
-	void GoCreateSession(int32 NumberOfPublicConnections, FString MatchType, int32 ServerPrivateJoinId, bool bIsPrivateSession);
+	void GoCreateSession(int32 NumberOfConnections, FString MatchType, int32 ServerPrivateJoinId, bool bIsPrivateSession);
 	FGoOnCreateSessionComplete GoOnCreateSessionComplete;
-	void GoFindSessions(int32 MaxSearchResults, int32 ServerPrivateJoinId);
+	void UpdateSession(FOnlineSessionSettings& UpdateSessionSettings);
+	FGoOnUpdateSessionComplete GoOnUpdateSessionComplete;
+	void GoFindSessions(int64 InServerJoinId);
 	FGoOnFindSessionsComplete GoOnFindSessionsComplete;
 	void GoJoinSession(const FOnlineSessionSearchResult& SessionSearchResult);
 	FGoOnJoinSessionComplete GoOnJoinSessionComplete;
@@ -52,38 +51,34 @@ public:
 	FGoOnDestroySessionComplete GoOnDestroySessionComplete;
 	void GoStartSession();
 	FGoOnStartSessionComplete GoOnStartSessionComplete;
-	
-	//~ To handle Friends functionality.
-	//void GoReadFriendsList();
-	//FGoOnReadFriendsListComplete GoOnReadFriendsListComplete;
 
+	UPROPERTY(BlueprintReadWrite)
+	int32 ServerJoinId = 0;	//~ Server Join Id displayed on the UI.
+	
 protected:
 	//~ To handle Login functionality.
 	void OnLoginComplete(int32 LocalUserNum, bool bWasSuccess, const FUniqueNetId& UserId, const FString& Error);
 	
 	//~ To handle session functionality.
 	void OnCreateSessionComplete(FName SessionName, bool bWasSuccess);
+	void OnUpdateSessionComplete(FName SessionName, bool bWasSuccess);
 	void OnFindSessionsComplete(bool bWasSuccess);
 	void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
 	void OnDestroySessionComplete(FName SessionName, bool bWasSuccess);
 	void OnStartSessionComplete(FName SessionName,bool bWasSuccess);
-
-	//~ To handle Friends functionality.
-	//void OnReadFriendsListComplete(int32 LocalUserNum, bool bWasSuccessful, const FString& ListName, const FString& ErrorStr);
 	
 private:
 	IOnlineIdentityPtr Identity;
 	IOnlineSessionPtr SessionInterface;
-	IOnlineFriendsPtr FriendsInterface;
-	TSharedPtr<FOnlineSessionSearch> LastSessionSearch;
-	TArray<TSharedRef<FOnlineFriend>> FriendsList;
-
-	UPROPERTY(BlueprintReadWrite, meta=(AllowPrivateAccess="true"))
-	int32 PublicServerJoinId{0};
+	TSharedPtr<FOnlineSessionSearch> SessionSearchSettings;
 
 	//~ Delegates to add to the Online Session Interface delegate list. Each one has its own handle.
+	FOnLoginCompleteDelegate LoginCompleteDelegate;
+	FDelegateHandle LoginCompleteDelegateHandle;
 	FOnCreateSessionCompleteDelegate CreateSessionCompleteDelegate;
 	FDelegateHandle CreateSessionCompleteDelegateHandle;
+	FOnUpdateSessionCompleteDelegate UpdateSessionCompleteDelegate;
+	FDelegateHandle UpdateSessionCompleteDelegateHandle;
 	FOnFindSessionsCompleteDelegate FindSessionsCompleteDelegate;
 	FDelegateHandle FindSessionsCompleteDelegateHandle;
 	FOnJoinSessionCompleteDelegate JoinSessionCompleteDelegate;
@@ -97,16 +92,11 @@ private:
 	bool bCreateSessionOnDestroy {false};
 	bool bCreatePrivateSession {false};
 	int32 LastNumberOfPublicConnections = 0;
-	int32 LastServerPrivateJoinId = 0;
-	FString LastMatchType;
-
+	int64 LastServerPrivateJoinId = 0;
+	FString LastMatchType {FString()};
+	
 	//~ Persistent Data
 	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess="true"))
 	FName LoggedPlayerUsername{"Unknown"};
 
 };
-
-static void LogMessage(FString Message)
-{
-	UE_LOG(LogTemp, Warning, TEXT("%s"), *Message);
-}

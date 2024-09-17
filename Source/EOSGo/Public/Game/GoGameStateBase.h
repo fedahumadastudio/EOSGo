@@ -3,7 +3,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameStateBase.h"
+#include "Interfaces/OnlineSessionInterface.h"
 #include "GoGameStateBase.generated.h"
+class UGoSubsystem;
 class AGoGameModeBase;
 
 //~ GO GAME STATE DELEGATES
@@ -27,14 +29,18 @@ protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION()
-	void OnRegisteredPlayerListChanged(bool bWasSuccessful);
+	void OnRegisteredPlayerListChanged(FName SessionName, bool bWasSuccessful);
 
 private:
 	TObjectPtr<AGoGameModeBase> GoGameModeBase;
+	TObjectPtr<UGoSubsystem> GoSubsystem;
+	IOnlineSessionPtr SessionInterface;
 	
 	UPROPERTY(ReplicatedUsing="OnRep_PlayerList")
 	TArray<FName> PlayerList;
 	UFUNCTION()
 	void OnRep_PlayerList();
-	
+
+	void CheckSessionFull(FName SessionName);
+	void UpdateSessionAdvertising(bool InShouldAdvertise);
 };
