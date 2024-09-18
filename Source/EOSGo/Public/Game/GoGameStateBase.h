@@ -27,9 +27,11 @@ public:
 
 protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
+	
 	UFUNCTION()
-	void OnRegisteredPlayerListChanged(FName SessionName, bool bWasSuccessful);
+	void OnRegisteredPlayer(bool bWasSuccessful);
+	UFUNCTION()
+	void OnUnregisteredPlayer(bool bWasSuccessful);
 
 private:
 	TObjectPtr<AGoGameModeBase> GoGameModeBase;
@@ -41,6 +43,7 @@ private:
 	UFUNCTION()
 	void OnRep_PlayerList();
 
-	void CheckSessionFull(FName SessionName);
+	void CheckSessionToAdvertise(bool bIsRegisteringPlayer);
 	void UpdateSessionAdvertising(bool InShouldAdvertise);
+	void PlayerListChanged();
 };

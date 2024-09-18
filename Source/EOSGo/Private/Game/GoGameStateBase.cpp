@@ -1,7 +1,6 @@
 // Copyright (c) 2024 Fedahumada Studio. All Rights Reserved.
 
 #include "Game/GoGameStateBase.h"
-
 #include "EOSGo.h"
 #include "OnlineSessionSettings.h"
 #include "Game/GoGameModeBase.h"
@@ -21,8 +20,8 @@ AGoGameStateBase::AGoGameStateBase()
 	if (GoGameModeBase)
 	{
 		//~ Bind callbacks.
-		GoGameModeBase->GoOnRegisterPlayerComplete.AddDynamic(this, &AGoGameStateBase::OnRegisteredPlayerListChanged);
-		GoGameModeBase->GoOnUnregisterPlayerComplete.AddDynamic(this, &AGoGameStateBase::OnRegisteredPlayerListChanged);
+		GoGameModeBase->GoOnRegisterPlayerComplete.AddDynamic(this, &AGoGameStateBase::OnRegisteredPlayer);
+		GoGameModeBase->GoOnUnregisterPlayerComplete.AddDynamic(this, &AGoGameStateBase::OnUnregisteredPlayer);
 	}
 }
 
@@ -34,28 +33,24 @@ void AGoGameStateBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 	DOREPLIFETIME(AGoGameStateBase, PlayerList);
 }
 
-void AGoGameStateBase::OnRegisteredPlayerListChanged(FName SessionName, bool bWasSuccessful)
+
+void AGoGameStateBase::OnRegisteredPlayer(bool bWasSuccessful)
 {
 	if (!bWasSuccessful) return;
 	if (!HasAuthority()) return;
-	CheckSessionFull(SessionName);
-	
-	//~ UPDATE PLAYER LIST
-	PlayerList.Empty();
-	for (TObjectPtr<APlayerState> PlayerState : PlayerArray)
-	{
-		PlayerList.AddUnique(FName(PlayerState->GetPlayerName()));
-	}
-	//~ Broadcast the updated player list.
-	OnPlayerListChanged.Broadcast(PlayerList);
+	CheckSessionToAdvertise(true);
+	PlayerListChanged();
 }
-
-void AGoGameStateBase::OnRep_PlayerList()
+void AGoGameStateBase::OnUnregisteredPlayer(bool bWasSuccessful)
 {
-	OnPlayerListChanged.Broadcast(PlayerList);
+	if (!bWasSuccessful) return;
+	if (!HasAuthority()) return;
+	CheckSessionToAdvertise(false);
+	PlayerListChanged();
 }
 
-void AGoGameStateBase::CheckSessionFull(FName SessionName)
+
+void AGoGameStateBase::CheckSessionToAdvertise(bool bIsRegisteringPlayer)
 {
 	if (IOnlineSubsystem* Subsystem = IOnlineSubsystem::Get())
 	{
@@ -64,22 +59,48 @@ void AGoGameStateBase::CheckSessionFull(FName SessionName)
 	
 	if (!SessionInterface.IsValid()) return;
 
-	FOnlineSession* GoSession = SessionInterface->GetNamedSession(SessionName);
-	FString Type;
-	GoSession->SessionSettings.Get(FName("MATCH_TYPE"), Type);
-	if (Type.IsEmpty()) LogMessage("Retrieved MatchType variable via online service is empty");
-	
-	if (Type == "DUO")
+	FOnlineSession* GoSession = SessionInterface->GetNamedSession(NAME_GameSession);
+	FString Value;
+	GoSession->SessionSettings.Get(FName("MATCH_TYPE"), Value);
+
+	if (Value.IsEmpty()) LogMessage("Retrieved MatchType variable via online service is empty");
+	FName Type = FName(Value);
+
+	if (bIsRegisteringPlayer)
 	{
-		if (PlayerArray.Num() == 2) UpdateSessionAdvertising(false);
+		if (Type == "DUO")
+		{
+			LogMessage("Updating DUO session");
+			if (PlayerArray.Num() == 2) UpdateSessionAdvertising(false);
+		}
+		else if (Type == "TRIO")
+		{
+			LogMessage("Updating TRIO session");
+			if (PlayerArray.Num() == 3) UpdateSessionAdvertising(false);
+		}
+		else if (Type == "SQUAD")
+		{
+			LogMessage("Updating SQUAD session");
+			if (PlayerArray.Num() == 4) UpdateSessionAdvertising(false);
+		}
 	}
-	else if (Type == "TRIO")
+	else
 	{
-		if (PlayerArray.Num() == 3) UpdateSessionAdvertising(false);
-	}
-	else if (Type == "SQUAD")
-	{
-		if (PlayerArray.Num() == 4) UpdateSessionAdvertising(false);
+		if (Type == "DUO")
+		{
+			LogMessage("Updating DUO session");
+			if (PlayerArray.Num() < 2) UpdateSessionAdvertising(true);
+		}
+		else if (Type == "TRIO")
+		{
+			LogMessage("Updating TRIO session");
+			if (PlayerArray.Num() < 3) UpdateSessionAdvertising(true);
+		}
+		else if (Type == "SQUAD")
+		{
+			LogMessage("Updating SQUAD session");
+			if (PlayerArray.Num() < 4) UpdateSessionAdvertising(true);
+		}
 	}
 }
 
@@ -96,4 +117,21 @@ void AGoGameStateBase::UpdateSessionAdvertising(bool InShouldAdvertise)
 
 	//~ Call update session
 	if (GoSubsystem) GoSubsystem->UpdateSession(*NewSessionSettings);
+}
+
+
+void AGoGameStateBase::PlayerListChanged()
+{
+	//~ UPDATE PLAYER LIST
+	PlayerList.Empty();
+	for (TObjectPtr<APlayerState> PlayerState : PlayerArray)
+	{
+		PlayerList.AddUnique(FName(PlayerState->GetPlayerName()));
+	}
+	//~ Broadcast the updated player list.
+	OnPlayerListChanged.Broadcast(PlayerList);
+}
+void AGoGameStateBase::OnRep_PlayerList()
+{
+	OnPlayerListChanged.Broadcast(PlayerList);
 }

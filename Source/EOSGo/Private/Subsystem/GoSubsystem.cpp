@@ -130,6 +130,8 @@ void UGoSubsystem::GoCreateSession(int32 NumberOfConnections, FString MatchType,
 	TSharedPtr<FOnlineSessionSettings> SessionSettings = MakeShared<FOnlineSessionSettings>();
 	SessionSettings->bIsDedicated = false;
 	SessionSettings->bIsLANMatch = false;
+	SessionSettings->NumPublicConnections = NumberOfConnections;
+	SessionSettings->NumPrivateConnections = 0;
 	SessionSettings->bUsesPresence = true;
 	SessionSettings->bAllowJoinViaPresence = true;
 	SessionSettings->bAllowJoinViaPresenceFriendsOnly = true;
@@ -148,12 +150,10 @@ void UGoSubsystem::GoCreateSession(int32 NumberOfConnections, FString MatchType,
     {
         ServerJoinId = ServerPrivateJoinId;
         SessionSettings->Set(FName("SERVER_JOIN_ID"), ServerPrivateJoinId, EOnlineDataAdvertisementType::ViaOnlineService);
-    	SessionSettings->NumPrivateConnections = NumberOfConnections;
     }
     else
     {
     	SessionSettings->Set(FName("SERVER_JOIN_ID"), 0, EOnlineDataAdvertisementType::ViaOnlineService);
-    	SessionSettings->NumPublicConnections = NumberOfConnections;
     }
 	
 	//~ UniqueNetId& required to hosting the session.
