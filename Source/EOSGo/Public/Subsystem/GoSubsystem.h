@@ -2,8 +2,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "OnlineSubsystem.h"
 #include "Interfaces/OnlineIdentityInterface.h"
 #include "Interfaces/OnlineSessionInterface.h"
+#include "Interfaces/OnlineUserInterface.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "GoSubsystem.generated.h"
 
@@ -69,7 +71,9 @@ protected:
 	
 private:
 	IOnlineIdentityPtr Identity;
+	IOnlineUserPtr UserInterface;
 	IOnlineSessionPtr SessionInterface;
+	TSharedPtr<FOnlineUser> User;
 	TSharedPtr<FOnlineSessionSearch> SessionSearchSettings;
 
 	//~ Delegates to add to the Online Session Interface delegate list. Each one has its own handle.

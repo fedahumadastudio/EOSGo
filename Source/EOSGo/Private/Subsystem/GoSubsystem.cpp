@@ -24,6 +24,7 @@ StartSessionCompleteDelegate(FOnStartSessionCompleteDelegate::CreateUObject(this
 		LogMessage("Subsystem is loaded!");
 		Identity = Subsystem->GetIdentityInterface();
 		SessionInterface = Subsystem->GetSessionInterface();
+		UserInterface = Subsystem->GetUserInterface();
 	}
 }
 
@@ -34,9 +35,11 @@ void UGoSubsystem::OnLoginComplete(int32 LocalUserNum, bool bWasSuccess, const F
 	if (Identity) Identity->ClearOnLoginCompleteDelegate_Handle(LocalUserNum, LoginCompleteDelegateHandle);
 
 	//~ Broadcast Go Subsystem Delegate - Login was successful.
+	User = UserInterface->GetUserInfo(LocalUserNum, UserId);
+	
 	if (Identity->GetLoginStatus(LocalUserNum) == ELoginStatus::LoggedIn)
 	{
-		LoggedPlayerUsername = FName(Identity->GetPlayerNickname(UserId));
+		LoggedPlayerUsername = FName(User->GetDisplayName(FString("Epic")));
 		GoOnLoginComplete.Broadcast(LoggedPlayerUsername);
 		LogMessage("Login Successful");
 	}
@@ -97,20 +100,12 @@ void UGoSubsystem::OnCreateSessionComplete(FName SessionName, bool bWasSuccess)
 	if (SessionInterface) SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
 	
 	//~ Broadcast Go Subsystem Delegate - Creation successful.
-	GoOnCreateSessionComplete.Broadcast(true);
+	GoOnCreateSessionComplete.Broadcast(bWasSuccess);
 }
 void UGoSubsystem::GoCreateSession(int32 NumberOfConnections, FString MatchType, int32 ServerPrivateJoinId, bool bIsPrivateSession)
 {
     if (!SessionInterface.IsValid()) return;
-	
-	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
-	if (!LocalPlayer)
-	{
-		LogMessage("LocalPlayer on creation is invalid!");
-		GoOnCreateSessionComplete.Broadcast(false);
-		return;
-	}
-	
+
     auto ExistingSession = SessionInterface->GetNamedSession(NAME_GameSession);
 	//~ If same named session exists, it will be deleted.
     if (ExistingSession != nullptr)
@@ -156,18 +151,8 @@ void UGoSubsystem::GoCreateSession(int32 NumberOfConnections, FString MatchType,
     	SessionSettings->Set(FName("SERVER_JOIN_ID"), 0, EOnlineDataAdvertisementType::ViaOnlineService);
     }
 	
-	//~ UniqueNetId& required to hosting the session.
-	FUniqueNetIdRepl UniqueNetIdRepl = LocalPlayer->GetUniqueNetIdForPlatformUser();
-    TSharedPtr<const FUniqueNetId> UniqueNetId = UniqueNetIdRepl.GetUniqueNetId();
-    if (!UniqueNetId.IsValid())
-    {
-        LogMessage("UniqueNetId on creation is invalid!");
-        GoOnCreateSessionComplete.Broadcast(false);
-        return;
-    }
-	
 	//~ CREATE
-    if (!SessionInterface->CreateSession(*UniqueNetId, NAME_GameSession, *SessionSettings))
+    if (!SessionInterface->CreateSession(*User->GetUserId(), NAME_GameSession, *SessionSettings))
     {
     	//~ If it doesn't create the session, clear delegate of the delegate list.
         SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
@@ -184,8 +169,8 @@ void UGoSubsystem::OnUpdateSessionComplete(FName SessionName, bool bWasSuccess)
 	if (SessionInterface) SessionInterface->ClearOnUpdateSessionCompleteDelegate_Handle(UpdateSessionCompleteDelegateHandle);
 
 	//~ Broadcast Go Subsystem Delegate - Updating successful.
-	GoOnUpdateSessionComplete.Broadcast(true);
-	LogMessage("Session updated successfuly");
+	GoOnUpdateSessionComplete.Broadcast(bWasSuccess);
+	LogMessage("Session updated successfully");
 }
 void UGoSubsystem::UpdateSession(FOnlineSessionSettings& UpdateSessionSettings)
 {
@@ -251,28 +236,8 @@ void UGoSubsystem::GoFindSessions(int64 InServerJoinId)
 		FName("SERVER_JOIN_ID"), FOnlineSessionSearchParam(InServerJoinId, EOnlineComparisonOp::Equals)
 	);
 	
-	//~ Player validations
-	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
-	if (!LocalPlayer)
-	{
-		LogMessage("LocalPlayer on searching is invalid!");
-		GoOnFindSessionsComplete.Broadcast(TArray<FOnlineSessionSearchResult>(),false);
-		return;
-	}
-
-	//~ UniqueNetId& required to search sessions.
-	FUniqueNetIdRepl UniqueNetIdRepl = LocalPlayer->GetUniqueNetIdForPlatformUser();
-	TSharedPtr<const FUniqueNetId> UniqueNetId = UniqueNetIdRepl.GetUniqueNetId();
-	
-	if (!UniqueNetId.IsValid())
-	{
-		LogMessage("UniqueNetId on searching is invalid!");
-		GoOnFindSessionsComplete.Broadcast(TArray<FOnlineSessionSearchResult>(),false);
-		return;
-	}
-	
 	//~ SEARCH
-	if (!SessionInterface->FindSessions(*UniqueNetId, SessionSearchSettings.ToSharedRef()))
+	if (!SessionInterface->FindSessions(*User->GetUserId(), SessionSearchSettings.ToSharedRef()))
 	{
 		LogMessage("Searching for sessions failed");
 		//~ If searching wasn't successful, clear delegate of the delegate list.
@@ -301,32 +266,12 @@ void UGoSubsystem::GoJoinSession(const FOnlineSessionSearchResult& SessionSearch
 		GoOnJoinSessionComplete.Broadcast(FName(), EOnJoinSessionCompleteResult::UnknownError);
 		return;
 	}
-
-	//~ Player validations
-	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
-	if (!LocalPlayer)
-	{
-		LogMessage("LocalPlayer on join is invalid!");
-		GoOnJoinSessionComplete.Broadcast(FName(), EOnJoinSessionCompleteResult::UnknownError);
-		return;
-	}
-
-	//~ UniqueNetId& required to search sessions.
-	FUniqueNetIdRepl UniqueNetIdRepl = LocalPlayer->GetUniqueNetIdForPlatformUser();
-	TSharedPtr<const FUniqueNetId> UniqueNetId = UniqueNetIdRepl.GetUniqueNetId();
-	
-	if (!UniqueNetId.IsValid())
-	{
-		LogMessage("UniqueNetId on join is invalid!");
-		GoOnJoinSessionComplete.Broadcast(FName(), EOnJoinSessionCompleteResult::UnknownError);
-		return;
-	}
 	
 	//~ Store the delegate in a FDelegateHandle, so we can later remove it from the delegate list.
 	JoinSessionCompleteDelegateHandle = SessionInterface->AddOnJoinSessionCompleteDelegate_Handle(JoinSessionCompleteDelegate);
 
 	//~ JOIN
-	if (!SessionInterface->JoinSession(*UniqueNetId, NAME_GameSession, SessionSearchResult))
+	if (!SessionInterface->JoinSession(*User->GetUserId(), NAME_GameSession, SessionSearchResult))
 	{
 		LogMessage("Joining Failed");
 		//~ If joining wasn't successful, clear delegate of the delegate list.
@@ -379,9 +324,31 @@ void UGoSubsystem::GoDestroySession()
 
 void UGoSubsystem::OnStartSessionComplete(FName SessionName, bool bWasSuccess)
 {
-	
+	//~ If starting wasn't successful, clear delegate of the delegate list.
+	SessionInterface->ClearOnStartSessionCompleteDelegate_Handle(StartSessionCompleteDelegateHandle);
+
+	//~ Broadcast Go Subsystem Delegate - Starting was successful.
+	UE_LOG(LogTemp, Warning, TEXT("Starting session: %s "), *SessionName.ToString());
+	GoOnStartSessionComplete.Broadcast(bWasSuccess);
 }
 void UGoSubsystem::GoStartSession()
 {
+	if (!SessionInterface.IsValid())
+	{	
+		GoOnStartSessionComplete.Broadcast(false);
+		return;
+	}
+
+	//~ Store the delegate in a FDelegateHandle, so we can later remove it from the delegate list.
+	StartSessionCompleteDelegateHandle = SessionInterface->AddOnStartSessionCompleteDelegate_Handle(StartSessionCompleteDelegate);
 	
+	//~ START
+	if (!SessionInterface->StartSession(NAME_GameSession))
+	{
+		LogMessage("Start session Failed");
+		//~ If starting wasn't successful, clear delegate of the delegate list.
+		SessionInterface->ClearOnStartSessionCompleteDelegate_Handle(StartSessionCompleteDelegateHandle);
+		//~ Broadcast Go Subsystem Delegate - Starting wasn't successful.
+		GoOnStartSessionComplete.Broadcast(false);
+	}	
 }

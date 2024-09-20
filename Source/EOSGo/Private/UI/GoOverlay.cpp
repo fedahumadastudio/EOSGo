@@ -4,6 +4,7 @@
 #include "EOSGo.h"
 #include "Subsystem/GoSubsystem.h"
 #include "Components/Button.h"
+#include "Components/TextBlock.h"
 #include "Game/GoGameModeBase.h"
 
 bool UGoOverlay::Initialize()
@@ -13,6 +14,10 @@ bool UGoOverlay::Initialize()
 	if (ExitSession_Button)
 	{
 		ExitSession_Button->OnClicked.AddDynamic(this, &UGoOverlay::ExitSessionButtonClicked);
+	}
+	if (StartSession_Button)
+	{
+		StartSession_Button->OnClicked.AddDynamic(this, &UGoOverlay::StartSessionButtonClicked);
 	}
 	return true;
 }
@@ -29,15 +34,18 @@ void UGoOverlay::GoOverlaySetup()
 	SetVisibility(ESlateVisibility::Visible);
 	SetIsFocusable(true);
 
-	if (const UWorld* World = GetWorld())
+	if (APlayerController* PlayerController = GetOwningPlayer())
 	{
-		if (APlayerController* PlayerController = World->GetFirstPlayerController())
+		FInputModeUIOnly InputModeData;
+		InputModeData.SetWidgetToFocus(TakeWidget());
+		InputModeData.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		PlayerController->SetInputMode(InputModeData);
+		PlayerController->SetShowMouseCursor(true);
+
+		if (!PlayerController->HasAuthority())
 		{
-			FInputModeUIOnly InputModeData;
-			InputModeData.SetWidgetToFocus(TakeWidget());
-			InputModeData.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-			PlayerController->SetInputMode(InputModeData);
-			PlayerController->SetShowMouseCursor(true);
+			StartSession_Button->SetVisibility(ESlateVisibility::Hidden);
+			StartSession_Button->SetIsEnabled(false);
 		}
 	}
 	
@@ -53,7 +61,6 @@ void UGoOverlay::GoOverlaySetup()
 		GoSubsystem->GoOnStartSessionComplete.AddDynamic(this, &UGoOverlay::OnStartSession);
 	}
 }
-
 
 void UGoOverlay::OnDestroySession(bool bWasSuccessful)
 {
@@ -72,7 +79,7 @@ void UGoOverlay::OnDestroySession(bool bWasSuccessful)
 		}
 		else
 		{
-			if (APlayerController* PlayerController = World->GetFirstPlayerController())
+			if (APlayerController* PlayerController = GetOwningPlayer())
 			{
 				PlayerController->ClientReturnToMainMenuWithTextReason(FText());
 			}
@@ -83,6 +90,14 @@ void UGoOverlay::OnDestroySession(bool bWasSuccessful)
 
 void UGoOverlay::OnStartSession(bool bWasSuccessful)
 {
+	if (!bWasSuccessful)
+	{
+		LogMessage("Failed starting session!");
+		StartSession_Button->SetIsEnabled(true);
+		return;
+	}
+	
+	StartSession_Button->SetVisibility(ESlateVisibility::Hidden);	
 }
 
 void UGoOverlay::ExitSessionButtonClicked()
@@ -91,6 +106,18 @@ void UGoOverlay::ExitSessionButtonClicked()
 
 	//~ Call destroy session
 	if (GoSubsystem) GoSubsystem->GoDestroySession();
+}
+
+void UGoOverlay::StartSessionButtonClicked()
+{
+	if (APlayerController* PlayerController = GetOwningPlayer())
+	{
+		if (!PlayerController->HasAuthority()) return;
+
+		StartSession_Button->SetIsEnabled(false);
+		//~ Call start session
+		if (GoSubsystem) GoSubsystem->GoStartSession();
+	}
 }
 
 void UGoOverlay::MenuTearDown()

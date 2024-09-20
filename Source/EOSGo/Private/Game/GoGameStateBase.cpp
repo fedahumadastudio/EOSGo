@@ -1,13 +1,13 @@
 // Copyright (c) 2024 Fedahumada Studio. All Rights Reserved.
 
 #include "Game/GoGameStateBase.h"
-#include "EOSGo.h"
 #include "OnlineSessionSettings.h"
 #include "Game/GoGameModeBase.h"
 #include "GameFramework/PlayerState.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "Subsystem/GoSubsystem.h"
+#include "EOSGo.h"
 
 AGoGameStateBase::AGoGameStateBase()
 {
@@ -25,14 +25,30 @@ AGoGameStateBase::AGoGameStateBase()
 	}
 }
 
+void AGoGameStateBase::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (const UGameInstance* GameInstance = GetGameInstance())
+	{
+		GoSubsystem = GameInstance->GetSubsystem<UGoSubsystem>();
+	}
+	
+	if (IsValid(GoSubsystem))
+	{
+		//~ Bind session callbacks.
+		GoSubsystem->GoOnStartSessionComplete.AddDynamic(this, &AGoGameStateBase::OnStartedSession);
+	}
+}
+
 void AGoGameStateBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	// Add the PlayerList to the list of replicated properties.
 	DOREPLIFETIME(AGoGameStateBase, PlayerList);
+	DOREPLIFETIME(AGoGameStateBase, MatchStartedText);
 }
-
 
 void AGoGameStateBase::OnRegisteredPlayer(bool bWasSuccessful)
 {
@@ -48,7 +64,11 @@ void AGoGameStateBase::OnUnregisteredPlayer(bool bWasSuccessful)
 	CheckSessionToAdvertise(false);
 	PlayerListChanged();
 }
-
+void AGoGameStateBase::OnStartedSession(bool bWasSuccessful) 
+{
+	if (bWasSuccessful) MatchStartedText = FName("SESSION HAS STARTED!");
+	OnSessionStarted.Broadcast(bWasSuccessful);
+}
 
 void AGoGameStateBase::CheckSessionToAdvertise(bool bIsRegisteringPlayer)
 {
@@ -84,26 +104,7 @@ void AGoGameStateBase::CheckSessionToAdvertise(bool bIsRegisteringPlayer)
 			if (PlayerArray.Num() == 4) UpdateSessionAdvertising(false);
 		}
 	}
-	else
-	{
-		if (Type == "DUO")
-		{
-			LogMessage("Updating DUO session");
-			if (PlayerArray.Num() < 2) UpdateSessionAdvertising(true);
-		}
-		else if (Type == "TRIO")
-		{
-			LogMessage("Updating TRIO session");
-			if (PlayerArray.Num() < 3) UpdateSessionAdvertising(true);
-		}
-		else if (Type == "SQUAD")
-		{
-			LogMessage("Updating SQUAD session");
-			if (PlayerArray.Num() < 4) UpdateSessionAdvertising(true);
-		}
-	}
 }
-
 void AGoGameStateBase::UpdateSessionAdvertising(bool InShouldAdvertise)
 {
 	if (const UGameInstance* GameInstance = GetGameInstance())
@@ -118,8 +119,6 @@ void AGoGameStateBase::UpdateSessionAdvertising(bool InShouldAdvertise)
 	//~ Call update session
 	if (GoSubsystem) GoSubsystem->UpdateSession(*NewSessionSettings);
 }
-
-
 void AGoGameStateBase::PlayerListChanged()
 {
 	//~ UPDATE PLAYER LIST
@@ -131,7 +130,12 @@ void AGoGameStateBase::PlayerListChanged()
 	//~ Broadcast the updated player list.
 	OnPlayerListChanged.Broadcast(PlayerList);
 }
-void AGoGameStateBase::OnRep_PlayerList()
+void AGoGameStateBase::OnRep_MatchStartedText() const
+{
+	OnSessionStarted.Broadcast(true);
+}
+void AGoGameStateBase::OnRep_PlayerList() const
 {
 	OnPlayerListChanged.Broadcast(PlayerList);
 }
+

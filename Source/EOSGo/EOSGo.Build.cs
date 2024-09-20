@@ -28,6 +28,7 @@ public class EOSGo : ModuleRules
 				"OnlineSubsystem", 
 				"OnlineSubsystemUtils", 
 				"OnlineSubsystemEOS",
+				"EOSShared",
 				"UMG"
 				// ... add other public dependencies that you statically link with here ...
 			}

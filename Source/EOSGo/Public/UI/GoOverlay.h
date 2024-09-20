@@ -4,6 +4,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "GoOverlay.generated.h"
+class UTextBlock;
 class AGoGameModeBase;
 class FOnlineFriend;
 class UGoSubsystem;
@@ -38,9 +39,13 @@ private:
 	
 	UPROPERTY(meta = (BindWidget))
 	UButton* ExitSession_Button;
-
 	UFUNCTION()
 	void ExitSessionButtonClicked();
+
+	UPROPERTY(meta = (BindWidget))
+	UButton* StartSession_Button;
+	UFUNCTION()
+	void StartSessionButtonClicked();
 	
 	void MenuTearDown();
 };
